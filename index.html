@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>♛ شطرنج برو</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ===== شاشة الدخول ===== -->
+<div id="authScreen" class="auth-screen">
+  <div class="auth-bg"></div>
+  <div class="auth-card">
+    <div class="auth-logo">♛</div>
+    <h1 class="logo">شطرنج برو</h1>
+    <p class="subtitle">العب • تعلّم • تحدَّ • ارتقِ بتصنيفك</p>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="login">دخول</button>
+      <button class="tab" data-tab="register">حساب جديد</button>
+    </div>
+
+    <form id="loginForm" class="auth-form">
+      <input type="text" id="loginUser" placeholder="اسم المستخدم" required>
+      <input type="password" id="loginPass" placeholder="كلمة المرور" required>
+      <button type="submit" class="btn-primary">دخول</button>
+    </form>
+
+    <form id="registerForm" class="auth-form hidden">
+      <input type="text" id="regUser" placeholder="اسم المستخدم" required>
+      <input type="password" id="regPass" placeholder="كلمة المرور" required>
+      <button type="submit" class="btn-primary">إنشاء الحساب</button>
+    </form>
+
+    <p id="authMsg" class="auth-msg"></p>
+  </div>
+</div>
+
+<!-- ===== التطبيق ===== -->
+<div id="app" class="app hidden">
+  <aside class="sidebar">
+    <div class="brand"><span>♛</span> شطرنج برو</div>
+
+    <div class="user-mini">
+      <div class="avatar-mini" id="miniAvatar">♔</div>
+      <div>
+        <div class="mini-name" id="sideUser"></div>
+        <div class="mini-rating" id="sideRating">1200</div>
+      </div>
+    </div>
+
+    <nav>
+      <button class="nav-btn active" data-view="playAI"><span>🤖</span> ضد الذكاء الاصطناعي</button>
+      <button class="nav-btn" data-view="playOnline"><span>🌐</span> أونلاين مع صديق</button>
+      <button class="nav-btn" data-view="lessons"><span>📚</span> أكاديمية الشطرنج</button>
+      <button class="nav-btn" data-view="friends"><span>👥</span> الأصدقاء</button>
+      <button class="nav-btn" data-view="profile"><span>👤</span> حسابي</button>
+      <button class="nav-btn" data-view="leaderboard"><span>🏆</span> المتصدرون</button>
+    </nav>
+
+    <button id="logoutBtn" class="logout">خروج</button>
+  </aside>
+
+  <main class="content">
+
+    <!-- لعب AI -->
+    <section id="view-playAI" class="view active">
+      <h2>🤖 اللعب ضد الذكاء الاصطناعي</h2>
+      <div class="controls">
+        <label>المستوى:
+          <select id="aiLevelSel">
+            <option value="1">سهل (تقييم ~800)</option>
+            <option value="2" selected>متوسط (تقييم ~1200)</option>
+            <option value="3">صعب (تقييم ~1700)</option>
+          </select>
+        </label>
+        <label>تلعب كـ:
+          <select id="aiColorSel">
+            <option value="w" selected>أبيض</option>
+            <option value="b">أسود</option>
+          </select>
+        </label>
+        <button id="newAIGame" class="btn-primary">لعبة جديدة</button>
+      </div>
+      <div class="board-slot"></div>
+    </section>
+
+    <!-- أونلاين -->
+    <section id="view-playOnline" class="view">
+      <h2>🌐 اللعب أونلاين مع صديق</h2>
+      <div class="controls">
+        <button id="createRoom" class="btn-primary">إنشاء غرفة</button>
+        <input type="text" id="joinCode" placeholder="كود الغرفة" maxlength="5">
+        <button id="joinRoom">انضمام</button>
+      </div>
+      <p id="roomInfo" class="room-info"></p>
+      <div class="board-slot"></div>
+    </section>
+
+    <!-- الأكاديمية -->
+    <section id="view-lessons" class="view">
+      <div class="lessons-header">
+        <h2>📚 أكاديمية الشطرنج</h2>
+        <div class="progress-wrap">
+          <div class="progress-bar"><div id="progressFill"></div></div>
+          <span id="progressText">0 / 40 درس</span>
+        </div>
+      </div>
+      <div id="catFilter" class="cat-filter"></div>
+      <div id="lessonsList" class="lessons"></div>
+    </section>
+
+    <!-- الأصدقاء -->
+    <section id="view-friends" class="view">
+      <h2>👥 الأصدقاء</h2>
+      <div class="controls">
+        <input type="text" id="friendName" placeholder="اسم المستخدم">
+        <button id="addFriend" class="btn-primary">إضافة صديق</button>
+      </div>
+      <div id="friendsList" class="friends"></div>
+    </section>
+
+    <!-- الحساب -->
+    <section id="view-profile" class="view">
+      <h2>👤 حسابي</h2>
+      <div class="profile-card">
+        <div class="rating-badge">
+          <div class="rating-icon" id="rankIcon">⚔️</div>
+          <div class="rating-num" id="ratingNum">1200</div>
+          <div class="rating-rank" id="rankName">لاعب مبتدئ</div>
+        </div>
+        <h3 id="profileName"></h3>
+        <div class="stats">
+          <div><span id="statW">0</span><small>فوز</small></div>
+          <div><span id="statL">0</span><small>خسارة</small></div>
+          <div><span id="statD">0</span><small>تعادل</small></div>
+        </div>
+        <div class="profile-bar">
+          <button id="resetStats" class="btn-ghost">تصفير الإحصائيات</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- المتصدرون -->
+    <section id="view-leaderboard" class="view">
+      <h2>🏆 قائمة المتصدرين</h2>
+      <div id="leaderboard" class="leaderboard"></div>
+    </section>
+
+  </main>
+</div>
+
+<div id="gameBox" class="game-box hidden">
+  <div id="board" class="board"></div>
+  <div class="game-info">
+    <div class="turn-row">
+      <span>دور اللعب:</span>
+      <div id="turnDot" class="turn-dot"></div>
+    </div>
+    <div id="status" class="status">اختر الإعدادات وابدأ اللعب</div>
+    <button id="resignBtn" class="btn-ghost">استسلام / إنهاء</button>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

@@ -17,37 +17,135 @@
     <div class="bg-orb orb-2"></div>
     <div class="bg-orb orb-3"></div>
   </div>
+
   <div class="auth-card">
     <div class="auth-logo">
       <svg viewBox="0 0 45 45"><path d="M11 13l2.5 15h18L34 13l-5.5 9L24 10l-4.5 12L14 13z" fill="#0a0f1a"/><rect x="14" y="29" width="17" height="3" rx="1" fill="#0a0f1a"/><rect x="12" y="32" width="21" height="4.5" rx="2" fill="#0a0f1a"/><circle cx="22.5" cy="6.5" r="3" fill="#0a0f1a"/></svg>
     </div>
-    <h1 class="auth-title">شطرنج برو</h1>
-    <p class="auth-sub">العب • تعلّم • ارتقِ بتصنيفك</p>
+
+    <h1 class="auth-title" id="authTitle">أهلًا بعودتك 👋</h1>
+    <p class="auth-sub" id="authSub">سجّل دخولك لمتابعة تقدّمك في الشطرنج</p>
 
     <div class="auth-tabs">
-      <button class="auth-tab active" data-tab="login">دخول</button>
-      <button class="auth-tab" data-tab="register">حساب جديد</button>
+      <button type="button" class="auth-tab active" data-tab="login">دخول</button>
+      <button type="button" class="auth-tab" data-tab="register">حساب جديد</button>
     </div>
 
-    <form id="loginForm" class="auth-form">
-      <div class="inp-wrap"><span>👤</span><input type="text" id="loginUser" placeholder="اسم المستخدم" required></div>
-      <div class="inp-wrap"><span>🔒</span><input type="password" id="loginPass" placeholder="كلمة المرور" required></div>
-      <button type="submit" class="btn-gold">دخول</button>
+    <form id="loginForm" class="auth-form" autocomplete="on">
+      <div class="field">
+        <label>البريد الإلكتروني / اسم المستخدم</label>
+        <div class="inp-wrap">
+          <span class="inp-icon">✉️</span>
+          <input type="text" id="loginUser" placeholder="you@example.com" required autocomplete="username">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>كلمة المرور</label>
+        <div class="inp-wrap">
+          <span class="inp-icon">🔒</span>
+          <input type="password" id="loginPass" placeholder="••••••••" required autocomplete="current-password">
+          <button type="button" class="eye-btn" data-target="loginPass">👁</button>
+        </div>
+      </div>
+
+      <div class="row-between">
+        <label class="checkbox-label">
+          <input type="checkbox" id="rememberMe" checked>
+          <span class="custom-check"></span>
+          <span>تذكرني</span>
+        </label>
+        <a href="#" class="link-gold" id="forgotLink">نسيت كلمة المرور؟</a>
+      </div>
+
+      <button type="submit" class="btn-gold full">
+        <span>↪</span> تسجيل الدخول
+      </button>
     </form>
 
-    <form id="registerForm" class="auth-form hidden">
-      <div class="inp-wrap"><span>👤</span><input type="text" id="regUser" placeholder="اسم المستخدم" required></div>
-      <div class="inp-wrap"><span>🔒</span><input type="password" id="regPass" placeholder="كلمة المرور" required></div>
-      <button type="submit" class="btn-gold">إنشاء الحساب</button>
+    <form id="registerForm" class="auth-form hidden" autocomplete="on">
+      <div class="field">
+        <label>البريد الإلكتروني</label>
+        <div class="inp-wrap">
+          <span class="inp-icon">✉️</span>
+          <input type="email" id="regEmail" placeholder="you@example.com" required autocomplete="email">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>اسم المستخدم</label>
+        <div class="inp-wrap">
+          <span class="inp-icon">👤</span>
+          <input type="text" id="regUser" placeholder="مثال: chess_master" required autocomplete="username">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>كلمة المرور</label>
+        <div class="inp-wrap">
+          <span class="inp-icon">🔒</span>
+          <input type="password" id="regPass" placeholder="8 أحرف + رقم + حرف كبير" required autocomplete="new-password">
+          <button type="button" class="eye-btn" data-target="regPass">👁</button>
+        </div>
+        <div class="strength-bar">
+          <div class="strength-seg"></div>
+          <div class="strength-seg"></div>
+          <div class="strength-seg"></div>
+          <div class="strength-seg"></div>
+        </div>
+        <div class="strength-text" id="strengthText">قوة كلمة المرور</div>
+      </div>
+
+      <div class="field">
+        <label>تأكيد كلمة المرور</label>
+        <div class="inp-wrap">
+          <span class="inp-icon">🔒</span>
+          <input type="password" id="regPass2" placeholder="أعد الإدخال" required autocomplete="new-password">
+          <button type="button" class="eye-btn" data-target="regPass2">👁</button>
+        </div>
+      </div>
+
+      <div class="req-box">
+        <div class="req" id="req-len"><span class="dot"></span> 8 أحرف على الأقل</div>
+        <div class="req" id="req-num"><span class="dot"></span> رقم واحد على الأقل</div>
+        <div class="req" id="req-upper"><span class="dot"></span> حرف كبير (A-Z)</div>
+        <div class="req" id="req-match"><span class="dot"></span> الكلمتان متطابقتان</div>
+      </div>
+
+      <label class="checkbox-label">
+        <input type="checkbox" id="termsCheck">
+        <span class="custom-check"></span>
+        <span>أوافق على <a href="#" class="link-gold">الشروط والأحكام</a></span>
+      </label>
+
+      <button type="submit" class="btn-gold full">
+        <span>↪</span> إنشاء الحساب
+      </button>
     </form>
+
     <p id="authMsg" class="auth-msg"></p>
+
+    <div class="divider"><span>أو تابع باستخدام</span></div>
+
+    <div class="social-row">
+      <button type="button" class="social-btn" onclick="socialLogin('google')">🇬 Google</button>
+      <button type="button" class="social-btn" onclick="socialLogin('github')">🐙 GitHub</button>
+      <button type="button" class="social-btn" onclick="socialLogin('discord')">💬 Discord</button>
+    </div>
+
+    <p class="switch-line">
+      <span id="switchText">ليس لديك حساب؟</span>
+      <a href="#" class="link-gold" id="switchLink">أنشئ حسابًا</a>
+    </p>
+
+    <div class="ssl-badge">
+      <span>🔒</span> اتصال آمن · SSL 256-bit
+    </div>
   </div>
 </div>
 
 <!-- ═══════════ التطبيق ═══════════ -->
 <div id="app" class="app hidden">
-
-  <!-- الشريط الجانبي -->
   <aside class="sidebar">
     <div class="brand">
       <div class="brand-logo">♛</div>
@@ -78,33 +176,30 @@
     <button id="logoutBtn" class="btn-logout">↩ خروج</button>
   </aside>
 
-  <!-- المحتوى -->
   <main class="content">
-
     <!-- ضد AI -->
     <section id="view-playAI" class="view active">
       <div class="view-header">
         <h2>🤖 اللعب ضد الكمبيوتر</h2>
         <p>اختر المستوى واللون وابدأ</p>
       </div>
-
       <div class="control-panel">
         <div class="ctrl">
           <label>مستوى الذكاء الاصطناعي</label>
           <div class="pill-group" id="aiLevelPills">
-            <button data-v="1" class="pill">🥉 مبتدئ</button>
-            <button data-v="2" class="pill">🥈 متوسط</button>
-            <button data-v="3" class="pill active">🥇 متقدم</button>
-            <button data-v="4" class="pill">🔥 خبير</button>
-            <button data-v="5" class="pill">⚡ أستاذ</button>
-            <button data-v="6" class="pill">👑 جراندماستر</button>
+            <button type="button" data-v="1" class="pill">🥉 مبتدئ</button>
+            <button type="button" data-v="2" class="pill">🥈 متوسط</button>
+            <button type="button" data-v="3" class="pill active">🥇 متقدم</button>
+            <button type="button" data-v="4" class="pill">🔥 خبير</button>
+            <button type="button" data-v="5" class="pill">⚡ أستاذ</button>
+            <button type="button" data-v="6" class="pill">👑 جراندماستر</button>
           </div>
         </div>
         <div class="ctrl">
           <label>لونك</label>
           <div class="pill-group" id="aiColorPills">
-            <button data-v="w" class="pill active">⚪ أبيض</button>
-            <button data-v="b" class="pill">⚫ أسود</button>
+            <button type="button" data-v="w" class="pill active">⚪ أبيض</button>
+            <button type="button" data-v="b" class="pill">⚫ أسود</button>
           </div>
         </div>
         <button id="newAIGame" class="btn-gold big">▶ لعبة جديدة</button>
@@ -155,7 +250,7 @@
         <h2>🧩 الألغاز التكتيكية</h2>
         <p>طوّر مهاراتك بحل المواقف</p>
       </div>
-      <div id="puzzleArea" class="puzzle-area">
+      <div class="puzzle-area">
         <div class="puzzle-card">
           <div class="puzzle-icon">🧩</div>
           <h3>قريبًا</h3>
@@ -171,7 +266,7 @@
         <p>أضف أصدقاءك وتحدّهم</p>
       </div>
       <div class="control-panel">
-        <div class="inp-wrap small"><span>👤</span><input type="text" id="friendName" placeholder="اسم المستخدم"></div>
+        <div class="inp-wrap small"><span class="inp-icon">👤</span><input type="text" id="friendName" placeholder="اسم المستخدم"></div>
         <button id="addFriend" class="btn-gold">➕ إضافة</button>
       </div>
       <div id="friendsList" class="friends-grid"></div>
@@ -194,7 +289,7 @@
       </div>
       <div class="profile-layout">
         <div class="profile-main">
-          <div class="rank-badge" id="rankBadge">
+          <div class="rank-badge">
             <div class="rank-inner">
               <div class="rank-icon" id="rankIcon">⚔️</div>
               <div class="rank-rating" id="ratingNum">1200</div>
@@ -220,23 +315,22 @@
         </div>
       </div>
     </section>
-
   </main>
 </div>
 
 <!-- ═══════════ اللوحة ═══════════ -->
 <div id="gameBox" class="game-box hidden">
   <div class="board-wrap">
-    <div class="player-bar top" id="topBar">
+    <div class="player-bar top">
       <div class="p-avatar black">♚</div>
       <div class="p-info"><div class="p-name" id="topName">الخصم</div><div class="p-rate" id="topRate">—</div></div>
-      <div class="p-clock" id="topClock">∞</div>
+      <div class="p-clock">∞</div>
     </div>
     <div id="board" class="board"></div>
-    <div class="player-bar bottom" id="bottomBar">
+    <div class="player-bar bottom">
       <div class="p-avatar white">♔</div>
       <div class="p-info"><div class="p-name" id="bottomName">أنت</div><div class="p-rate" id="bottomRate">—</div></div>
-      <div class="p-clock" id="bottomClock">∞</div>
+      <div class="p-clock">∞</div>
     </div>
   </div>
 
@@ -255,11 +349,11 @@
 
     <div class="moves-card">
       <div class="card-title">سجل النقلات</div>
-      <div id="movesList" class="moves-list"></div>
+      <div id="movesList" class="moves-list">—</div>
     </div>
 
     <button id="resignBtn" class="btn-outline danger">🏳️ استسلام</button>
-    <button id="flipBtn" class="btn-outline">🔄 اقلب</button>
+    <button id="flipBtn" class="btn-outline">🔄 اقلب اللوحة</button>
   </div>
 </div>
 
@@ -284,4 +378,4 @@
 
 <script src="script.js"></script>
 </body>
-    </html>
+  </html>

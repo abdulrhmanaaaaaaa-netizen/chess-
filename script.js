@@ -1,8 +1,8 @@
 /* ═══════════════════════════════════════════════════════════
-   شطرنج برو V4 — محرك كامل + AI متعدد المستويات + Elo + أكاديمية
+   شطرنج برو V5 — نظام كامل
    ═══════════════════════════════════════════════════════════ */
 
-/* ═══ قطع SVG بدون صلبان ═══ */
+/* ═══════════ قطع SVG بدون صلبان ═══════════ */
 const SVG = {
   p:`<svg viewBox="0 0 45 45"><circle cx="22.5" cy="13" r="6.5"/><path d="M22.5 19.5c-5 0-9 6.5-9 14.5h18c0-8-4-14.5-9-14.5z"/><rect x="10" y="34" width="25" height="4.5" rx="2.2"/></svg>`,
   r:`<svg viewBox="0 0 45 45"><path d="M11 9h5v5h4V9h5v5h4V9h5v10l-3 3v11l3 3v3H11v-3l3-3V22l-3-3z"/></svg>`,
@@ -12,12 +12,11 @@ const SVG = {
   k:`<svg viewBox="0 0 45 45"><circle cx="22.5" cy="6.5" r="3.3"/><path d="M11 13l2.5 15h18L34 13l-5.5 9L24 10l-4.5 12L14 13z"/><rect x="14" y="29" width="17" height="3" rx="1"/><rect x="12" y="32" width="21" height="4.5" rx="2"/><rect x="10" y="36.5" width="25" height="4.5" rx="2"/></svg>`
 };
 
-/* ═══ قيم القطع ═══ */
+/* ═══════════ محرك الشطرنج ═══════════ */
 const VAL={p:100,n:320,b:330,r:500,q:900,k:20000};
 const DIRS={r:[[1,0],[-1,0],[0,1],[0,-1]],b:[[1,1],[1,-1],[-1,1],[-1,-1]],n:[[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]]};
 DIRS.q=DIRS.r.concat(DIRS.b);DIRS.k=DIRS.r;
 
-/* ═══ لوحة البداية ═══ */
 function startBoard(){
   const back=['r','n','b','q','k','b','n','r'];
   const b=Array.from({length:8},()=>Array(8).fill(null));
@@ -26,7 +25,6 @@ function startBoard(){
 }
 const clone=b=>b.map(r=>r.slice());
 
-/* ═══ توليد النقلات ═══ */
 function pseudo(board,r,c){
   const p=board[r][c];if(!p)return[];
   const color=p[0],type=p[1],out=[];
@@ -66,15 +64,14 @@ function legal(board,color){
   return res;
 }
 
-/* ═══ الذكاء الاصطناعي ═══ */
+/* ═══════════ الذكاء الاصطناعي ═══════════ */
 function evaluate(board){
   let s=0;
   for(let r=0;r<8;r++)for(let c=0;c<8;c++){
     const p=board[r][c];if(!p)continue;
     const v=VAL[p[1]];
     const center=(3.5-Math.abs(3.5-r))+(3.5-Math.abs(3.5-c));
-    const develop=p[1]==='p'?(p[0]==='w'?7-r:r)*3:0;
-    s+=p[0]==='w'?(v+center*2+develop):-(v+center*2+develop);
+    s+=p[0]==='w'?(v+center*2):-(v+center*2);
   }
   return s;
 }
@@ -111,10 +108,23 @@ function aiChoose(board,color,depth){
   return bestList[Math.floor(Math.random()*bestList.length)];
 }
 
-/* ═══ المستخدمون ═══ */
-const getUsers=()=>JSON.parse(localStorage.getItem('chess_users')||'{}');
-const saveUsers=u=>localStorage.setItem('chess_users',JSON.stringify(u));
+/* ═══════════ التخزين ═══════════ */
+const USERS_KEY='chess_users_v2';
+const SESSION_KEY='chess_session_v2';
+const Store={
+  getUsers(){try{return JSON.parse(localStorage.getItem(USERS_KEY)||'{}');}catch(e){return{};}},
+  saveUsers(u){try{localStorage.setItem(USERS_KEY,JSON.stringify(u));return true;}catch(e){return false;}},
+  setSession(name,remember){
+    localStorage.removeItem(SESSION_KEY);sessionStorage.removeItem(SESSION_KEY);
+    (remember?localStorage:sessionStorage).setItem(SESSION_KEY,name);
+  },
+  getSession(){return localStorage.getItem(SESSION_KEY)||sessionStorage.getItem(SESSION_KEY);},
+  clearSession(){localStorage.removeItem(SESSION_KEY);sessionStorage.removeItem(SESSION_KEY);}
+};
+
 let currentUser=null;
+function getUsers(){return Store.getUsers();}
+function saveUsers(u){return Store.saveUsers(u);}
 
 function getRank(r){
   if(r<1000)return{name:'مبتدئ',icon:'🌱'};
@@ -125,24 +135,175 @@ function getRank(r){
   return{name:'أستاذ',icon:'👑'};
 }
 
-/* ═══ الحالة ═══ */
+/* ═══════════ AUTH SYSTEM ═══════════ */
+function isValidEmail(e){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);}
+function isValidUsername(u){return /^[a-zA-Z0-9_\u0600-\u06FF]{3,20}$/.test(u);}
+
+function showMsg(text,type='error'){
+  const el=document.getElementById('authMsg');
+  el.textContent=text;
+  el.className='auth-msg show '+type;
+}
+function hideMsg(){
+  const el=document.getElementById('authMsg');
+  el.className='auth-msg';
+  el.textContent='';
+}
+
+document.querySelectorAll('.eye-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const target=document.getElementById(btn.dataset.target);
+    if(!target)return;
+    const isPass=target.type==='password';
+    target.type=isPass?'text':'password';
+    btn.textContent=isPass?'🙈':'👁';
+  });
+});
+
+function calcStrength(pass){
+  let s=0;
+  if(pass.length>=8)s++;
+  if(/[A-Z]/.test(pass))s++;
+  if(/[0-9]/.test(pass))s++;
+  if(/[^A-Za-z0-9]/.test(pass)||pass.length>=12)s++;
+  return s;
+}
+function updateStrengthUI(pass){
+  const segs=document.querySelectorAll('.strength-seg');
+  const text=document.getElementById('strengthText');
+  const score=calcStrength(pass);
+  segs.forEach(s=>s.classList.remove('weak','medium','strong'));
+  if(!pass){text.textContent='قوة كلمة المرور';text.style.color='var(--muted)';return;}
+  let cls,label,color;
+  if(score<=1){cls='weak';label='ضعيفة';color='#f87171';}
+  else if(score===2){cls='medium';label='متوسطة';color='#fbbf24';}
+  else if(score===3){cls='medium';label='جيدة';color='#60a5fa';}
+  else{cls='strong';label='قوية جدًا';color='#4ade80';}
+  for(let i=0;i<score&&i<4;i++)segs[i].classList.add(cls);
+  text.textContent='قوة كلمة المرور: '+label;
+  text.style.color=color;
+}
+function updateRequirements(){
+  const pass=document.getElementById('regPass').value;
+  const pass2=document.getElementById('regPass2').value;
+  const checks={
+    'req-len':pass.length>=8,
+    'req-num':/[0-9]/.test(pass),
+    'req-upper':/[A-Z]/.test(pass),
+    'req-match':pass.length>0&&pass===pass2
+  };
+  Object.entries(checks).forEach(([id,ok])=>{
+    const el=document.getElementById(id);
+    if(el)el.classList.toggle('ok',ok);
+  });
+}
+document.getElementById('regPass')?.addEventListener('input',e=>{updateStrengthUI(e.target.value);updateRequirements();});
+document.getElementById('regPass2')?.addEventListener('input',updateRequirements);
+
+function setAuthMode(mode){
+  const isLogin=mode==='login';
+  document.querySelectorAll('.auth-tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===mode));
+  document.getElementById('loginForm').classList.toggle('hidden',!isLogin);
+  document.getElementById('registerForm').classList.toggle('hidden',isLogin);
+  document.getElementById('authTitle').textContent=isLogin?'أهلًا بعودتك 👋':'انضم إلينا 🚀';
+  document.getElementById('authSub').textContent=isLogin?'سجّل دخولك لمتابعة تقدّمك في الشطرنج':'أنشئ حسابك المجاني وابدأ رحلتك';
+  document.getElementById('switchText').textContent=isLogin?'ليس لديك حساب؟':'لديك حساب بالفعل؟';
+  document.getElementById('switchLink').textContent=isLogin?'أنشئ حسابًا':'سجّل الدخول';
+  hideMsg();
+}
+document.querySelectorAll('.auth-tab').forEach(t=>t.addEventListener('click',()=>setAuthMode(t.dataset.tab)));
+document.getElementById('switchLink').addEventListener('click',e=>{
+  e.preventDefault();
+  const isLoginVisible=!document.getElementById('loginForm').classList.contains('hidden');
+  setAuthMode(isLoginVisible?'register':'login');
+});
+
+document.getElementById('forgotLink').addEventListener('click',e=>{
+  e.preventDefault();
+  const user=prompt('أدخل اسم المستخدم أو البريد:');
+  if(!user)return;
+  const users=Store.getUsers();
+  const found=Object.keys(users).find(k=>k===user||users[k].email===user);
+  if(!found){showMsg('❌ لا يوجد حساب بهذا الاسم');return;}
+  const np=prompt('كلمة المرور الجديدة (8 أحرف + رقم + حرف كبير):');
+  if(!np)return;
+  if(np.length<8||!/[0-9]/.test(np)||!/[A-Z]/.test(np)){showMsg('❌ كلمة المرور ضعيفة');return;}
+  users[found].pass=np;
+  Store.saveUsers(users);
+  showMsg('✅ تم تحديث كلمة المرور','success');
+});
+
+document.getElementById('loginForm').addEventListener('submit',e=>{
+  e.preventDefault();hideMsg();
+  const user=document.getElementById('loginUser').value.trim();
+  const pass=document.getElementById('loginPass').value;
+  const remember=document.getElementById('rememberMe').checked;
+  if(!user||!pass){showMsg('❌ املأ جميع الحقول');return;}
+  const users=Store.getUsers();
+  const found=Object.keys(users).find(k=>k===user||(users[k].email&&users[k].email===user));
+  if(!found){showMsg('❌ لا يوجد حساب بهذا الاسم/البريد');return;}
+  if(users[found].pass!==pass){showMsg('❌ كلمة المرور غير صحيحة');return;}
+  showMsg('✅ جارٍ الدخول...','success');
+  currentUser=found;
+  Store.setSession(found,remember);
+  setTimeout(()=>enterApp(),400);
+});
+
+document.getElementById('registerForm').addEventListener('submit',e=>{
+  e.preventDefault();hideMsg();
+  const email=document.getElementById('regEmail').value.trim();
+  const user=document.getElementById('regUser').value.trim();
+  const pass=document.getElementById('regPass').value;
+  const pass2=document.getElementById('regPass2').value;
+  const terms=document.getElementById('termsCheck').checked;
+  if(!isValidEmail(email)){showMsg('❌ البريد غير صالح');return;}
+  if(!isValidUsername(user)){showMsg('❌ اسم المستخدم: 3-20 حرفًا');return;}
+  if(pass.length<8){showMsg('❌ كلمة المرور قصيرة');return;}
+  if(!/[0-9]/.test(pass)){showMsg('❌ يجب أن تحتوي على رقم');return;}
+  if(!/[A-Z]/.test(pass)){showMsg('❌ يجب أن تحتوي على حرف كبير');return;}
+  if(pass!==pass2){showMsg('❌ الكلمتان غير متطابقتين');return;}
+  if(!terms){showMsg('❌ يجب الموافقة على الشروط');return;}
+  const users=Store.getUsers();
+  if(users[user]){showMsg('❌ اسم المستخدم محجوز');return;}
+  if(Object.values(users).some(u=>u.email===email)){showMsg('❌ البريد مستخدم');return;}
+  users[user]={pass,email,rating:1200,stats:{w:0,l:0,d:0},friends:[],readLessons:[],createdAt:Date.now()};
+  if(!Store.saveUsers(users)){showMsg('❌ خطأ في التخزين');return;}
+  showMsg('🎉 تم إنشاء حسابك!','success');
+  currentUser=user;
+  Store.setSession(user,true);
+  setTimeout(()=>enterApp(),600);
+});
+
+function socialLogin(provider){
+  const names={google:'مستخدم جوجل',github:'مطور جيتهاب',discord:'عضو ديسكورد'};
+  const fakeName=`${provider}_${Math.floor(Math.random()*9000+1000)}`;
+  const users=Store.getUsers();
+  if(!users[fakeName]){
+    users[fakeName]={pass:'social_'+Date.now(),email:`${fakeName}@${provider}.com`,rating:1200,stats:{w:0,l:0,d:0},friends:[],readLessons:[],social:provider,createdAt:Date.now()};
+    Store.saveUsers(users);
+  }
+  showMsg(`✅ تم الدخول عبر ${names[provider]}`,'success');
+  currentUser=fakeName;
+  Store.setSession(fakeName,true);
+  setTimeout(()=>enterApp(),500);
+}
+
+/* ═══════════ GAME STATE ═══════════ */
 let board,selected,legalSel,turn,gameOver,gameMode,aiColor,aiDepth,aiLevelNum,myColorOnline,onlineChannel,lastMove,flipped,moveLog,captured;
 
 function resetState(){
   board=startBoard();selected=null;legalSel=[];turn='w';gameOver=false;
-  lastMove=null;moveLog=[];captured={w:[],b:[]};
+  lastMove=null;moveLog=[];captured={w:[],b:[]};flipped=false;
 }
 
-/* ═══ DOM ═══ */
 const $=id=>document.getElementById(id);
 const boardEl=$('board'),gameBox=$('gameBox'),statusEl=$('status'),turnDot=$('turnDot'),turnLabel=$('turnLabel');
 
-/* ═══ الرسم ═══ */
 function renderBoard(){
   boardEl.innerHTML='';
   const check=inCheck(board,turn)?findKing(board,turn):null;
   for(let r=0;r<8;r++)for(let c=0;c<8;c++){
-    const dr=flipped?7-r:r, dc=flipped?7-c:c;
+    const dr=flipped?7-r:r,dc=flipped?7-c:c;
     const sq=document.createElement('div');
     sq.className='sq '+((dr+dc)%2===0?'light':'dark');
     if(selected&&selected[0]===dr&&selected[1]===dc)sq.classList.add('selected');
@@ -168,20 +329,20 @@ function renderBoard(){
   renderMoves();
 }
 function renderCaptured(){
-  const toGlyph=arr=>arr.map(x=>SVG[x[1]].replace('<svg','<svg style="width:20px;height:20px;vertical-align:middle"')).join('');
-  $('capWhite').innerHTML=captured.w.map(x=>`<span style="display:inline-block;width:20px;height:20px">${SVG[x[1]]}</span>`).join('');
-  $('capBlack').innerHTML=captured.b.map(x=>`<span style="display:inline-block;width:20px;height:20px">${SVG[x[1]]}</span>`).join('');
+  const render=arr=>arr.map(x=>SVG[x[1]]).join('');
+  $('capWhite').innerHTML=captured.w.length?render(captured.w):'<span style="color:#8797b0">—</span>';
+  $('capBlack').innerHTML=captured.b.length?render(captured.b):'<span style="color:#8797b0">—</span>';
 }
 function renderMoves(){
   const el=$('movesList');
+  if(!moveLog.length){el.innerHTML='<span style="color:#8797b0">—</span>';return;}
   el.innerHTML=moveLog.map((m,i)=>{
     const num=Math.floor(i/2)+1;
     return i%2===0?`<span class="move-num">${num}.</span> ${m}`:`${m}`;
-  }).join(' · ')||'<span style="color:#8797b0">—</span>';
+  }).join(' · ');
   el.scrollTop=el.scrollHeight;
 }
 
-/* ═══ التفاعل ═══ */
 function onClick(r,c){
   if(gameOver)return;
   if(gameMode==='ai'&&turn===aiColor)return;
@@ -204,18 +365,13 @@ function doMove(r,c,rr,cc,broadcast=true){
   const pc=board[r][c];
   board[rr][cc]=pc;board[r][c]=null;
   if(pc[1]==='p'&&(rr===0||rr===7))board[rr][cc]=pc[0]+'q';
-
   const files='abcdefgh';
-  const notation=pc[1]==='p'?`${target?'':''}${files[c]}${8-r}${target?'x':'-'}${files[cc]}${8-rr}`:
-    `${pc[1].toUpperCase()}${target?'x':''}${files[cc]}${8-rr}`;
+  const notation=pc[1]==='p'?`${files[c]}${8-r}${target?'x':'-'}${files[cc]}${8-rr}`:`${pc[1].toUpperCase()}${target?'x':''}${files[cc]}${8-rr}`;
   moveLog.push(notation);
-
   lastMove=[r,c,rr,cc];selected=null;legalSel=[];
   turn=turn==='w'?'b':'w';
   renderBoard();
-
   if(broadcast&&gameMode==='online'&&onlineChannel)onlineChannel.postMessage({t:'mv',r,c,rr,cc});
-
   const done=checkEnd();
   if(!done&&gameMode==='ai'&&turn===aiColor){
     statusEl.textContent='🤖 الذكاء الاصطناعي يفكر...';
@@ -247,12 +403,11 @@ function checkEnd(){
   return false;
 }
 
-/* ═══ النتيجة + Elo ═══ */
 function showResult(winner,reason){
   const users=getUsers();const u=users[currentUser];
+  if(!u)return;
   u.rating=u.rating||1200;u.stats=u.stats||{w:0,l:0,d:0};
   const before=u.rating;
-
   let delta=0,humanWon,isDraw=winner==='d';
   if(gameMode==='ai'){
     const humanColor=aiColor==='w'?'b':'w';
@@ -272,11 +427,10 @@ function showResult(winner,reason){
 
   const emoji=isDraw?'🤝':(humanWon?'🏆':'💔');
   const title=isDraw?'تعادل':(humanWon?'فوز رائع!':'خسارة');
-  const sub=reason==='checkmate'?'كش مات':(reason==='stalemate'?'ستاليميت — تعادل':(reason==='resign'?'استسلام':''));
-
+  const sub=reason==='checkmate'?'كش مات':(reason==='stalemate'?'ستاليميت':(reason==='resign'?'استسلام':''));
   $('modalEmoji').textContent=emoji;
   $('modalTitle').textContent=title;
-  $('modalSub').textContent=`${sub} — ${humanWon||isDraw?'أحسنت':'حاول مرة أخرى'}`;
+  $('modalSub').textContent=sub;
   $('ratingBefore').textContent=before;
   $('ratingAfter').textContent=u.rating;
   $('ratingArrow').textContent=delta>=0?'→ +'+delta:'→ '+delta;
@@ -284,15 +438,14 @@ function showResult(winner,reason){
   $('resultModal').classList.remove('hidden');
 }
 
-/* ═══ بدء لعبة AI ═══ */
 function newAIGame(){
   aiLevelNum=parseInt(document.querySelector('#aiLevelPills .pill.active').dataset.v);
   aiDepth=aiLevelNum;
   const humanColor=document.querySelector('#aiColorPills .pill.active').dataset.v;
   aiColor=humanColor==='w'?'b':'w';
+  resetState();
   flipped=humanColor==='b';
-
-  resetState();gameMode='ai';
+  gameMode='ai';
   gameBox.classList.remove('hidden');
   document.querySelector('#view-playAI .board-slot').appendChild(gameBox);
   renderBoard();statusEl.textContent='دور الأبيض';
@@ -303,18 +456,18 @@ function newAIGame(){
   if(aiColor==='w')setTimeout(aiPlay,450);
 }
 
-/* ═══ أونلاين ═══ */
 function createRoom(){
   const code=Math.random().toString(36).slice(2,7).toUpperCase();
   onlineChannel=new BroadcastChannel('chess-'+code);
   onlineChannel.onmessage=handleOnline;
-  myColorOnline='w';flipped=false;
-  resetState();gameMode='online';
+  myColorOnline='w';
+  resetState();
+  gameMode='online';
   gameBox.classList.remove('hidden');
   document.querySelector('#view-playOnline .board-slot').appendChild(gameBox);
   renderBoard();
   statusEl.textContent='⏳ بانتظار الانضمام...';
-  $('roomInfo').textContent='📋 كود الغرفة: '+code+' — شاركه مع صديقك';
+  $('roomInfo').textContent='📋 كود الغرفة: '+code;
   $('topName').textContent='الخصم';$('bottomName').textContent='أنت (أبيض)';
 }
 function joinRoom(){
@@ -322,8 +475,10 @@ function joinRoom(){
   if(code.length!==5){$('roomInfo').textContent='❌ كود غير صالح';return;}
   onlineChannel=new BroadcastChannel('chess-'+code);
   onlineChannel.onmessage=handleOnline;
-  myColorOnline='b';flipped=true;
-  resetState();gameMode='online';
+  myColorOnline='b';
+  resetState();
+  flipped=true;
+  gameMode='online';
   gameBox.classList.remove('hidden');
   document.querySelector('#view-playOnline .board-slot').appendChild(gameBox);
   renderBoard();
@@ -342,48 +497,48 @@ function handleOnline(e){
     board=m.board;turn=m.turn;renderBoard();
     statusEl.textContent='✅ بدأت اللعبة — أنت الأسود';
   }
-  if(m.t==='mv')doMove(m.r,m.c,m.rr,m.cc,false);
+  if(m.t==='mv')doMove(m.r,m.c,m.rr,m.mr||m.rr,m.cc,false);
 }
 
-/* ═══ الدروس ═══ */
+/* ═══════════ الدروس ═══════════ */
 const LESSONS=[
-  {cat:'basics',level:'مبتدئ',title:'♟️ قطع الشطرنج وقيمتها',body:'البيدق=1، الحصان=3، الفيل=3، الرخ=5، الوزير=9، الملك=لا نهائي. استخدم هذه القيم لتقييم كل تبادل: هل هو مربح أم خاسر.',tip:'لا تضحّي بالوزير مقابل رخ + فيل إلا إذا رأيت ماتًا قريبًا.'},
-  {cat:'basics',level:'مبتدئ',title:'♞ حركة كل قطعة',body:'البيدق: للأمام فقط (خطوتان من البداية)، يأكل مائلًا. الحصان: حرف L، يقفز. الفيل: أقطار. الرخ: صفوف وأعمدة. الوزير: كل الاتجاهات. الملك: خطوة واحدة.',tip:'الحصان وحده يقفز فوق القطع.'},
-  {cat:'basics',level:'مبتدئ',title:'🎯 الهدف من اللعبة',body:'الفوز = كش مات على ملك الخصم. الكش = الملك مهدد ويمكنه الهرب. الستاليميت = لا حركة قانونية بدون كش = تعادل.',tip:'عندما تتقدم ماديًا، تجنّب الستاليميت.'},
-  {cat:'basics',level:'مبتدئ',title:'🏰 التبييت (Castling)',body:'نقل الملك والرخ دفعة واحدة. الملك يتحرك مربعين نحو الرخ، والرخ يقفز فوقه. الشرط: لم يتحركا، لا قطع بينهما، الملك غير مكشوش ولا يمرّ على مربع مهدد.',tip:'بيّت خلال أول 10 نقلات دائمًا.'},
-  {cat:'basics',level:'مبتدئ',title:'⬆️ ترقية البيدق',body:'عند وصول البيدق للصف الأخير، رقّيه لأي قطعة. غالبًا وزير. أحيانًا حصان لإعطاء كش.',tip:'احمِ بيادقك القريبة من الترقية.'},
-  {cat:'basics',level:'متوسط',title:'👑 الأخذ بالتجاوز (En Passant)',body:'إذا تحرك بيدق الخصم خطوتين ومرّ بجانب بيدقك في الصف الخامس، يمكنك أكله فورًا كأنه تحرك خطوة واحدة. الفرصة لنقلة واحدة فقط.',tip:'تذكّرها عندما يدفع الخصم بيدقًا خطوتين.'},
-  {cat:'openings',level:'متوسط',title:'🇮🇹 الافتتاحية الإيطالية',body:'1.e4 e5 2.Nf3 Nc6 3.Bc4 — الفيل يستهدف f7 (أضعف مربع قرب الملك). ثم d3 وc3 لبناء مركز قوي.',tip:'مثالية للمبتدئين لفهم مبادئ الافتتاح.'},
-  {cat:'openings',level:'متقدم',title:'🇪🇸 الإسبانية (Ruy López)',body:'1.e4 e5 2.Nf3 Nc6 3.Bb5 — سلاح الأبطال. الفيل يضغط على الحصان. الفروع: المورفي، البيرلينية، المغلقة.',tip:'ضغط استراتيجي طويل المدى بدل هجوم مباشر.'},
-  {cat:'openings',level:'متوسط',title:'🇫🇷 الدفاع الفرنسي',body:'1.e4 e6 — دفاع صلب. يعيق دفع e4-e5. عيبه: الفيل الملكي محبوس. الفروع: Winawer, Tarrasch.',tip:'الأسود يضرب على d4 و c5 لتقويض المركز.'},
-  {cat:'openings',level:'متقدم',title:'🇸🇮 الصقلية (Sicilian)',body:'1.e4 c5 — أشهر رد على e4. غير متوازن. الفروع: Najdorf (الأقوى)، Dragon، Sveshnikov.',tip:'تحتاج حفظًا عميقًا — لا تجرّبها بدون تحضير.'},
-  {cat:'openings',level:'متوسط',title:'♛ غامبيت الوزير',body:'1.d4 d5 2.c4 — الأبيض يضحي ببيدق مقابل مركز قوي. الفروع: Accepted، Declined، Slav.',tip:'لا تحتفظ بالبيدق الإضافي إذا كان سيُضعفك.'},
-  {cat:'openings',level:'متوسط',title:'🇬🇧 نظام لندن',body:'1.d4 2.Nf3 3.Bf4 — نظام صلب وسهل. الأبيض يبني d4/e3/c3 ويخرج الفيل قبل e3.',tip:'مثالي إذا كنت تكره النظرية المعقدة.'},
-  {cat:'openings',level:'متوسط',title:'⚠️ أخطاء الافتتاح الشائعة',body:'1) تحريك نفس القطعة مرتين. 2) إخراج الوزير مبكرًا. 3) تجاهل التطوير. 4) تحريك بيادق الأجنحة بلا سبب. 5) تبييت متأخر.',tip:'طوّر → بيّت → هاجم.'},
-  {cat:'tactics',level:'مبتدئ',title:'📌 التثبيت (Pin)',body:'تثبيت قطعة الخصم لأن خلفها قطعة أهم. المطلق: خلفها الملك (لا تتحرك). النسبي: خلفها قطعة ثمينة. استغل القطعة المثبتة.',tip:'فيل b5 يثبّت حصان c6 ضد الملك e8.'},
-  {cat:'tactics',level:'مبتدئ',title:'🍴 الشوكة (Fork)',body:'قطعة واحدة تهاجم قطعتين. الحصان سيد الشوكات. البيدق أيضًا يشوك.',tip:'اقلب وضع القطع في ذهنك وابحث عن مربعات الحصان.'},
-  {cat:'tactics',level:'متوسط',title:'🔪 الشيشة (Skewer)',body:'عكس التثبيت: قطعة ثمينة في المقدمة، أقل قيمة في الخلف. تهاجم الأولى فيهرب فتأكل الثانية.',tip:'مفيدة في النهايات عندما يكون الملك خلف قطعة.'},
-  {cat:'tactics',level:'متوسط',title:'💥 الهجوم المكتشف',body:'تحرك قطعة فتكشف عن هجوم قطعة أخرى خلفها. إذا كانت المكتشِفة تعطي كشًا، فالخصم مُجبر على الرد.',tip:'الهجوم المكتشف مع كش = أقوى تكتيك.'},
-  {cat:'tactics',level:'متوسط',title:'🎭 التضحية (Sacrifice)',body:'التخلي عن مادة مقابل ميزة أكبر (هجوم، مركز، تفعيل). النوعية: رخ مقابل حصان/فيل.',tip:'احسب حتى النهاية قبل التضحية.'},
-  {cat:'tactics',level:'متقدم',title:'🌀 مات الصف الأخير',body:'عندما يكون الملك محصورًا في الصف الأخير ببيادقه، رخ أو وزير يعطي مات على طول الصف.',tip:'تأكد من وجود "نافذة تنفس" لملكك.'},
-  {cat:'tactics',level:'متقدم',title:'⚡ التعادل بالكش المستمر',body:'عندما تكون خاسرًا ماديًا، اجبر الخصم على تكرار الوضع 3 مرات للحصول على تعادل.',tip:'لو كنت خاسرًا، ابحث عن سلسلة كش لا تنتهي.'},
-  {cat:'tactics',level:'متوسط',title:'🧲 الجذب والصد',body:'تكتيك جذب قطعة دفاعية بعيدًا ثم مهاجمة هدف محمي. مثال: تضحي بالوزير لسحب الملك ثم مات بالحصان.',tip:'ابحث عن قطع الخصم المدافعة — كيف تُبعدها؟'},
-  {cat:'strategy',level:'متوسط',title:'🎯 السيطرة على المركز',body:'المركز = d4/e4/d5/e5. من يسيطر عليه يتحرك بحرية ويهجم أسرع. السيطرة بالبيادق أو القطع.',tip:'افتح ببيدق مركزي (e4 أو d4) ودعمه.'},
-  {cat:'strategy',level:'متوسط',title:'🏗️ بنية البيادق',body:'البيادق لا تعود. المتضاعفة = ضعف. المعزولة = ضعف. الحرة (Passed) = قوة. سلسلة البيادق = درع.',tip:'تجنّب التضاعف بدون تعويض من نشاط القطع.'},
-  {cat:'strategy',level:'متقدم',title:'🛤️ الأعمدة المفتوحة',body:'الرخ يحتاج أعمدة مفتوحة للوصول لعمق موقف الخصم. ضاعف الرخاخ على عمود مفتوح لضغط قاتل.',tip:'رخ على عمود مفتوح = 1.5 بيدق مادي.'},
-  {cat:'strategy',level:'متقدم',title:'🐴 الحصان الجيد ضد الفيل السيئ',body:'الحصان يحتاج مربعات دعم لا يمكن مهاجمتها ببيادق. ضعه على مربع أمامي محمي. الفيل السيئ = المحصور ببيادقه.',tip:'إذا كان لديك فيل سيئ، فكّر في تبادله.'},
-  {cat:'strategy',level:'متقدم',title:'📐 المربعات الضعيفة',body:'المربع الضعيف = مربع لا يمكن حمايته ببيدق. ضع قطعة فيه (حصان مثالي). ابحث عن المربعات الضعيفة في معسكر الخصم.',tip:'المربع d5 في الفرنسي مثال كلاسيكي.'},
-  {cat:'strategy',level:'مبتدئ',title:'🧘 قاعدة "حسّن أسوأ قطعة"',body:'في المواقف الهادئة، حسّن أسوأ قطعة لديك. لا تشن هجومًا بدون تفوق. عندما لا ترى تكتيكًا، حسّن موقعك.',tip:'اسأل نفسك: ما أسوأ قطعة عندي؟ حسّنها.'},
-  {cat:'endgame',level:'متوسط',title:'👑 الملك في النهاية',body:'في النهاية، الملك يتحول لقطعة هجومية. فعّله! في نهايات البيادق، الملك النشط يفوز غالبًا.',tip:'بعد تبادل الوزراء، أخرج ملكك للمركز.'},
-  {cat:'endgame',level:'متقدم',title:'⚖️ التقابل (Opposition)',body:'عندما يقف الملكان على نفس العمود/الصف مع مربع بينهما، صاحب الدور خاسر. قاعدة حاسمة في نهايات الملك والبيدق.',tip:'اجبر الخصم على الخسارة بالتقابل ثم ادفع البيدق.'},
-  {cat:'endgame',level:'متوسط',title:'🏁 الملك + بيدق ضد الملك',body:'إذا وصل ملكك أمام بيدقك بمربع مقابل ملك الخصم، فأنت تفوز. إن لم تفعل، تعادل.',tip:'ادفع الملك أولًا ثم البيدق.'},
-  {cat:'endgame',level:'متقدم',title:'🏰 نهاية الرخ',body:'أصعب أنواع النهايات. الرخ النشط يفوز. القاعدة: ضع رخك خلف البيدق الحر (لك أو ضدك).',tip:'الرخ الخلفي يدعم تقدم بيدقك بلا حصار.'},
-  {cat:'endgame',level:'متقدم',title:'💎 نهاية الوزراء',body:'الوزير وحده لا يعطي مات بدون مساعدة الملك. اجعل الملك قريبًا ثم استخدم الوزير لإجبار الملك على الحافة.',tip:'احذر الكش المستمر من وزير الخصم.'},
-  {cat:'endgame',level:'مبتدئ',title:'📏 قاعدة المربع',body:'عندما يجري بيدق نحو الترقية والملك يطارده: ارسم مربعًا ذهنيًا. إذا كان الملك داخل المربع يلحق، وإلا لا.',tip:'احسب المربع من البيدق لصف الترقية.'},
-  {cat:'psych',level:'متوسط',title:'🧠 التحكم في العواطف',body:'الشطرنج صراع نفسي. لا تلعب وأنت غاضب أو متعب. خسارة قطعة ليست نهاية اللعبة — استمر بالضغط.',tip:'الهدوء يفوز أكثر من العبقرية.'},
-  {cat:'psych',level:'متقدم',title:'⏱️ إدارة الوقت',body:'وزّع الوقت: 20% للافتتاح، 50% للوسط، 30% للنهاية. لا تُفرط في التفكير بنقلة واضحة.',tip:'إذا كانت النقلة بديهية، لا تصرف أكثر من 30 ثانية.'},
-  {cat:'psych',level:'متقدم',title:'🎭 خداع الخصم',body:'لا تلعب دائمًا أفضل نقلة — العب الأصعب على الخصم. اضبط إيقاعك حسب مستوى الخصم.',tip:'ضد هجومي، العب هادئًا. ضد دفاعي، اضغط.'},
-  {cat:'psych',level:'متوسط',title:'📖 التعلم من الأخطاء',body:'بعد كل مباراة، راجعها وحلل الأخطاء. احتفظ بدفتر أخطاء متكررة. التطور من التحليل لا اللعب فقط.',tip:'3 مباريات + تحليل > 10 مباريات بدون تحليل.'}
+  {cat:'basics',level:'مبتدئ',title:'♟️ قطع الشطرنج وقيمتها',body:'البيدق=1، الحصان=3، الفيل=3، الرخ=5، الوزير=9. استخدم هذه القيم لتقييم كل تبادل.',tip:'لا تضحّ بالوزير مقابل رخ + فيل إلا لمات قريب.'},
+  {cat:'basics',level:'مبتدئ',title:'♞ حركة كل قطعة',body:'البيدق: للأمام فقط، يأكل مائلًا. الحصان: حرف L، يقفز. الفيل: أقطار. الرخ: صفوف وأعمدة. الوزير: كل الاتجاهات. الملك: خطوة واحدة.',tip:'الحصان وحده يقفز فوق القطع.'},
+  {cat:'basics',level:'مبتدئ',title:'🎯 الهدف من اللعبة',body:'الفوز = كش مات على ملك الخصم. الستاليميت = لا حركة قانونية بدون كش = تعادل.',tip:'عندما تتقدم ماديًا، تجنّب الستاليميت.'},
+  {cat:'basics',level:'مبتدئ',title:'🏰 التبييت (Castling)',body:'نقل الملك والرخ دفعة واحدة. شرطه: لم يتحركا، لا قطع بينهما، الملك غير مكشوش.',tip:'بيّت خلال أول 10 نقلات دائمًا.'},
+  {cat:'basics',level:'مبتدئ',title:'⬆️ ترقية البيدق',body:'عند وصول البيدق للصف الأخير، رقّيه لأي قطعة. غالبًا وزير.',tip:'احمِ بيادقك القريبة من الترقية.'},
+  {cat:'basics',level:'متوسط',title:'👑 الأخذ بالتجاوز',body:'إذا تحرك بيدق الخصم خطوتين ومرّ بجانب بيدقك في الصف الخامس، يمكنك أكله فورًا.',tip:'الفرصة لنقلة واحدة فقط.'},
+  {cat:'openings',level:'متوسط',title:'🇮🇹 الافتتاحية الإيطالية',body:'1.e4 e5 2.Nf3 Nc6 3.Bc4 — الفيل يستهدف f7 الأضعف. ثم d3 وc3.',tip:'مثالية للمبتدئين.'},
+  {cat:'openings',level:'متقدم',title:'🇪🇸 الإسبانية',body:'1.e4 e5 2.Nf3 Nc6 3.Bb5 — سلاح الأبطال. الفيل يضغط على الحصان.',tip:'ضغط استراتيجي طويل المدى.'},
+  {cat:'openings',level:'متوسط',title:'🇫🇷 الدفاع الفرنسي',body:'1.e4 e6 — دفاع صلب. يعيق دفع e4-e5. عيبه: الفيل الملكي محبوس.',tip:'الأسود يضرب على d4 و c5.'},
+  {cat:'openings',level:'متقدم',title:'🇸🇮 الصقلية',body:'1.e4 c5 — أشهر رد على e4. غير متوازن. الفروع: Najdorf, Dragon.',tip:'تحتاج حفظًا عميقًا.'},
+  {cat:'openings',level:'متوسط',title:'♛ غامبيت الوزير',body:'1.d4 d5 2.c4 — الأبيض يضحي ببيدق مقابل مركز قوي.',tip:'لا تحتفظ بالبيدق الإضافي إذا سيضعفك.'},
+  {cat:'openings',level:'متوسط',title:'🇬🇧 نظام لندن',body:'1.d4 2.Nf3 3.Bf4 — نظام صلب وسهل.',tip:'مثالي إذا كرهت النظرية.'},
+  {cat:'openings',level:'متوسط',title:'⚠️ أخطاء الافتتاح',body:'1) تحريك نفس القطعة مرتين. 2) إخراج الوزير مبكرًا. 3) تجاهل التطوير. 4) تبييت متأخر.',tip:'طوّر → بيّت → هاجم.'},
+  {cat:'tactics',level:'مبتدئ',title:'📌 التثبيت (Pin)',body:'تثبيت قطعة الخصم لأن خلفها قطعة أهم. المطلق: خلفها الملك.',tip:'فيل b5 يثبّت حصان c6 ضد الملك e8.'},
+  {cat:'tactics',level:'مبتدئ',title:'🍴 الشوكة (Fork)',body:'قطعة واحدة تهاجم قطعتين. الحصان سيد الشوكات.',tip:'ابحث عن مربعات انطلاق الحصان.'},
+  {cat:'tactics',level:'متوسط',title:'🔪 الشيشة (Skewer)',body:'عكس التثبيت: قطعة ثمينة أمام، أقل قيمة خلف. تهاجم الأولى فيهرب فتأكل الثانية.',tip:'مفيدة في النهايات.'},
+  {cat:'tactics',level:'متوسط',title:'💥 الهجوم المكتشف',body:'تحرك قطعة فتكشف عن هجوم قطعة أخرى خلفها.',tip:'مع كش = أقوى تكتيك.'},
+  {cat:'tactics',level:'متوسط',title:'🎭 التضحية',body:'التخلي عن مادة مقابل ميزة أكبر (هجوم، مركز، تفعيل).',tip:'احسب حتى النهاية قبل التضحية.'},
+  {cat:'tactics',level:'متقدم',title:'🌀 مات الصف الأخير',body:'عندما يكون الملك محصورًا ببيادقه في الصف الأخير، رخ أو وزير يعطي مات.',tip:'تأكد من "نافذة تنفس" لملكك.'},
+  {cat:'tactics',level:'متقدم',title:'⚡ الكش المستمر',body:'عندما تكون خاسرًا ماديًا، اجبر الخصم على تكرار الوضع 3 مرات للتعادل.',tip:'ابحث عن سلسلة كش لا تنتهي.'},
+  {cat:'tactics',level:'متوسط',title:'🧲 الجذب والصد',body:'جذب قطعة دفاعية بعيدًا ثم مهاجمة هدف محمي.',tip:'ابحث عن قطع الخصم المدافعة.'},
+  {cat:'strategy',level:'متوسط',title:'🎯 السيطرة على المركز',body:'المركز = d4/e4/d5/e5. من يسيطر عليه يتحرك بحرية.',tip:'افتح ببيدق مركزي (e4 أو d4).'},
+  {cat:'strategy',level:'متوسط',title:'🏗️ بنية البيادق',body:'البيادق لا تعود. المتضاعفة والمعزولة = ضعف. الحرة = قوة.',tip:'تجنّب التضاعف بدون تعويض.'},
+  {cat:'strategy',level:'متقدم',title:'🛤️ الأعمدة المفتوحة',body:'الرخ يحتاج أعمدة مفتوحة. ضاعف الرخاخ على عمود واحد.',tip:'رخ على عمود مفتوح = 1.5 بيدق.'},
+  {cat:'strategy',level:'متقدم',title:'🐴 الحصان الجيد ضد الفيل السيئ',body:'الحصان يحتاج مربعات دعم لا يمكن مهاجمتها ببيادق.',tip:'إذا كان لديك فيل سيئ، بادله.'},
+  {cat:'strategy',level:'متقدم',title:'📐 المربعات الضعيفة',body:'المربع الضعيف = لا يمكن حمايته ببيدق. ضع قطعة فيه.',tip:'d5 في الفرنسي مثال كلاسيكي.'},
+  {cat:'strategy',level:'مبتدئ',title:'🧘 حسّن أسوأ قطعة',body:'في المواقف الهادئة، حسّن أسوأ قطعة لديك. لا تشن هجومًا بدون تفوق.',tip:'ما أسوأ قطعة عندي؟ حسّنها.'},
+  {cat:'endgame',level:'متوسط',title:'👑 الملك في النهاية',body:'في النهاية، الملك يتحول لقطعة هجومية. فعّله!',tip:'أخرج ملكك للمركز بعد تبادل الوزراء.'},
+  {cat:'endgame',level:'متقدم',title:'⚖️ التقابل (Opposition)',body:'عندما يقف الملكان على نفس العمود/الصف مع مربع بينهما، صاحب الدور خاسر.',tip:'اجبر الخصم على التقابل ثم ادفع البيدق.'},
+  {cat:'endgame',level:'متوسط',title:'🏁 الملك + بيدق ضد الملك',body:'إذا وصل ملكك أمام بيدقك بمربع مقابل ملك الخصم، فأنت تفوز.',tip:'ادفع الملك أولًا ثم البيدق.'},
+  {cat:'endgame',level:'متقدم',title:'🏰 نهاية الرخ',body:'أصعب أنواع النهايات. القاعدة: ضع رخك خلف البيدق الحر.',tip:'الرخ الخلفي يدعم تقدم بيدقك.'},
+  {cat:'endgame',level:'متقدم',title:'💎 نهاية الوزراء',body:'الوزير وحده لا يعطي مات. اجعل الملك قريبًا.',tip:'احذر الكش المستمر.'},
+  {cat:'endgame',level:'مبتدئ',title:'📏 قاعدة المربع',body:'ارسم مربعًا ذهنيًا من البيدق لصف الترقية. إذا كان الملك داخل المربع يلحق.',tip:'احسب المربعات.'},
+  {cat:'psych',level:'متوسط',title:'🧠 التحكم في العواطف',body:'لا تلعب وأنت غاضب. خسارة قطعة ليست نهاية اللعبة.',tip:'الهدوء يفوز أكثر من العبقرية.'},
+  {cat:'psych',level:'متقدم',title:'⏱️ إدارة الوقت',body:'20% للافتتاح، 50% للوسط، 30% للنهاية.',tip:'النقلة البديهية في 30 ثانية.'},
+  {cat:'psych',level:'متقدم',title:'🎭 خداع الخصم',body:'العب الأصعب على الخصم لا الأفضل لك دائمًا.',tip:'ضد هجومي: العب هادئًا.'},
+  {cat:'psych',level:'متوسط',title:'📖 التعلم من الأخطاء',body:'بعد كل مباراة، راجعها وحلل الأخطاء.',tip:'3 مباريات + تحليل > 10 بدون تحليل.'}
 ];
 
 const CATS={all:{name:'الكل',icon:'📚'},basics:{name:'الأساسيات',icon:'♟️'},openings:{name:'الافتتاحيات',icon:'🚪'},tactics:{name:'التكتيكات',icon:'⚡'},strategy:{name:'الاستراتيجية',icon:'🎯'},endgame:{name:'النهايات',icon:'🏁'},psych:{name:'سيكولوجيا',icon:'🧠'}};
@@ -400,11 +555,10 @@ function renderProgress(){
   const pct=Math.round(done/total*100);
   $('progressPct').textContent=pct+'%';
   const ring=$('progressRing');
-  const dash=157;
-  ring.style.strokeDashoffset=dash-(dash*pct/100);
+  if(ring){const dash=157;ring.style.strokeDashoffset=dash-(dash*pct/100);}
 }
 function renderCatFilter(){
-  const el=$('catFilter');el.innerHTML='';
+  const el=$('catFilter');if(!el)return;el.innerHTML='';
   Object.entries(CATS).forEach(([k,v])=>{
     const b=document.createElement('button');
     b.className='cat-btn'+(activeCat===k?' active':'');
@@ -415,7 +569,7 @@ function renderCatFilter(){
 }
 function renderLessons(cat){
   activeCat=cat;renderCatFilter();
-  const el=$('lessonsList');el.innerHTML='';
+  const el=$('lessonsList');if(!el)return;el.innerHTML='';
   const read=getRead();
   LESSONS.map((l,i)=>({...l,i})).filter(l=>cat==='all'||l.cat===cat).forEach(l=>{
     const c=document.createElement('div');
@@ -427,13 +581,13 @@ function renderLessons(cat){
   renderProgress();
 }
 
-/* ═══ الأصدقاء ═══ */
+/* ═══════════ الأصدقاء / الحساب / المتصدرون ═══════════ */
 function renderFriends(){
-  const el=$('friendsList');
+  const el=$('friendsList');if(!el)return;
   const u=getUsers()[currentUser];
   const friends=(u&&u.friends)||[];
   el.innerHTML='';
-  if(!friends.length){el.innerHTML='<p class="empty-msg">لا يوجد أصدقاء بعد — أضف صديقًا باسم المستخدم</p>';return;}
+  if(!friends.length){el.innerHTML='<p class="empty-msg">لا يوجد أصدقاء بعد</p>';return;}
   friends.forEach(n=>{
     const c=document.createElement('div');
     c.className='friend-card';
@@ -455,20 +609,24 @@ function challengeFriend(name){
   showView('playOnline');createRoom();
 }
 
-/* ═══ الحساب ═══ */
 function renderProfile(){
   const users=getUsers();const u=users[currentUser];
   if(!u)return;
   u.rating=u.rating||1200;u.stats=u.stats||{w:0,l:0,d:0};
-  $('profileName').textContent=currentUser;
-  $('statW').textContent=u.stats.w;$('statL').textContent=u.stats.l;$('statD').textContent=u.stats.d;
-  $('ratingNum').textContent=u.rating;
+  const el=id=>document.getElementById(id);
+  if(el('profileName'))el('profileName').textContent=currentUser;
+  if(el('statW'))el('statW').textContent=u.stats.w;
+  if(el('statL'))el('statL').textContent=u.stats.l;
+  if(el('statD'))el('statD').textContent=u.stats.d;
+  if(el('ratingNum'))el('ratingNum').textContent=u.rating;
   const r=getRank(u.rating);
-  $('rankName').textContent=r.name;$('rankIcon').textContent=r.icon;
-  $('sideRating').textContent=u.rating;
+  if(el('rankName'))el('rankName').textContent=r.name;
+  if(el('rankIcon'))el('rankIcon').textContent=r.icon;
+  if(el('sideRating'))el('sideRating').textContent=u.rating;
+  if(el('userAvatar'))el('userAvatar').textContent=r.icon;
 }
 function renderLeaderboard(){
-  const el=$('leaderboard');
+  const el=$('leaderboard');if(!el)return;
   const users=getUsers();
   const list=Object.entries(users).map(([n,u])=>({n,r:u.rating||1200})).sort((a,b)=>b.r-a.r);
   el.innerHTML='';
@@ -482,7 +640,6 @@ function renderLeaderboard(){
   });
 }
 
-/* ═══ التنقل ═══ */
 function showView(name){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
@@ -499,83 +656,74 @@ function showView(name){
   if(name==='lessons')renderLessons(activeCat);
 }
 
-/* ═══ الأحداث ═══ */
-document.querySelectorAll('.auth-tab').forEach(t=>{
-  t.onclick=()=>{
-    document.querySelectorAll('.auth-tab').forEach(x=>x.classList.remove('active'));
-    t.classList.add('active');
-    const isLogin=t.dataset.tab==='login';
-    $('loginForm').classList.toggle('hidden',!isLogin);
-    $('registerForm').classList.toggle('hidden',isLogin);
-    $('authMsg').textContent='';
-  };
-});
-$('loginForm').onsubmit=e=>{
-  e.preventDefault();
-  const n=$('loginUser').value.trim(),p=$('loginPass').value;
-  const users=getUsers();
-  if(!users[n]||users[n].pass!==p){$('authMsg').textContent='❌ بيانات غير صحيحة';return;}
-  currentUser=n;localStorage.setItem('chess_current',n);enterApp();
-};
-$('registerForm').onsubmit=e=>{
-  e.preventDefault();
-  const n=$('regUser').value.trim(),p=$('regPass').value;
-  if(n.length<3){$('authMsg').textContent='❌ الاسم قصير جدًا';return;}
-  if(p.length<4){$('authMsg').textContent='❌ كلمة المرور قصيرة';return;}
-  const users=getUsers();
-  if(users[n]){$('authMsg').textContent='❌ الاسم مستخدم';return;}
-  users[n]={pass:p,rating:1200,stats:{w:0,l:0,d:0},friends:[],readLessons:[]};
-  saveUsers(users);currentUser=n;localStorage.setItem('chess_current',n);enterApp();
-};
-$('logoutBtn').onclick=()=>{localStorage.removeItem('chess_current');location.reload();};
+/* ═══════════ ENTER APP ═══════════ */
+function enterApp(){
+  $('authScreen').classList.add('hidden');
+  $('app').classList.remove('hidden');
+  const u=getUsers()[currentUser];
+  if(!u)return;
+  $('sideUser').textContent=currentUser;
+  $('sideRating').textContent=u.rating||1200;
+  renderProfile();renderFriends();renderLessons('all');renderLeaderboard();
+}
 
-document.querySelectorAll('.nav-item').forEach(b=>b.onclick=()=>showView(b.dataset.view));
+/* ═══════════ ربط الأحداث ═══════════ */
+document.querySelectorAll('.nav-item').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
 
-// Pills
-document.querySelectorAll('#aiLevelPills .pill').forEach(p=>p.onclick=()=>{
+document.querySelectorAll('#aiLevelPills .pill').forEach(p=>p.addEventListener('click',()=>{
   document.querySelectorAll('#aiLevelPills .pill').forEach(x=>x.classList.remove('active'));
   p.classList.add('active');
-});
-document.querySelectorAll('#aiColorPills .pill').forEach(p=>p.onclick=()=>{
+}));
+document.querySelectorAll('#aiColorPills .pill').forEach(p=>p.addEventListener('click',()=>{
   document.querySelectorAll('#aiColorPills .pill').forEach(x=>x.classList.remove('active'));
   p.classList.add('active');
-});
+}));
 
-$('newAIGame').onclick=newAIGame;
-$('createRoom').onclick=createRoom;
-$('joinRoom').onclick=joinRoom;
-$('addFriend').onclick=addFriend;
-$('resignBtn').onclick=()=>{
+$('newAIGame')?.addEventListener('click',newAIGame);
+$('createRoom')?.addEventListener('click',createRoom);
+$('joinRoom')?.addEventListener('click',joinRoom);
+$('addFriend')?.addEventListener('click',addFriend);
+
+$('resignBtn')?.addEventListener('click',()=>{
   if(gameOver)return;
   gameOver=true;
   const winner=turn==='w'?'b':'w';
   showResult(winner,'resign');
-};
-$('flipBtn').onclick=()=>{flipped=!flipped;renderBoard();};
-$('resetStats').onclick=()=>{
+});
+
+$('flipBtn')?.addEventListener('click',()=>{flipped=!flipped;renderBoard();});
+
+$('resetStats')?.addEventListener('click',()=>{
   if(!confirm('تصفير كل الإحصائيات والتقييم؟'))return;
   const users=getUsers();
   users[currentUser].stats={w:0,l:0,d:0};
   users[currentUser].rating=1200;
   saveUsers(users);renderProfile();renderLeaderboard();
-};
-$('modalRematch').onclick=()=>{
+});
+
+$('modalRematch')?.addEventListener('click',()=>{
   $('resultModal').classList.add('hidden');
   if(gameMode==='ai')newAIGame();
   else if(gameMode==='online')createRoom();
-و $('modalClose').onclick=()=>$('resultModal').classList.add('hidden');
+});
+$('modalClose')?.addEventListener('click',()=>$('resultModal').classList.add('hidden'));
 
-/* ═══ التشغيل ═══ */
-function enterApp(){
-  $('authScreen').classList.add('hidden');
-  $('app').classList.remove('hidden');
-  $('sideUser').textContent=currentUser;
-  const u=getUsers()[currentUser];
-  $('sideRating').textContent=u.rating||1200;
-  $('userAvatar').textContent=getRank(u.rating||1200).icon;
-  renderProfile();renderFriends();renderLessons('all');renderLeaderboard();
-}
-(function(){
-  const n=localStorage.getItem('chess_current');
-  if(n&&getUsers()[n]){currentUser=n;enterApp();}
+$('logoutBtn')?.addEventListener('click',()=>{
+  Store.clearSession();
+  location.reload();
+});
+
+/* ═══════════ جلسة تلقائية ═══════════ */
+(function restoreSession(){
+  const saved=Store.getSession();
+  if(saved&&Store.getUsers()[saved]){
+    currentUser=saved;
+    enterApp();
+  } else {
+    setAuthMode('login');
+  }
 })();
+
+/* ═══════════ تصدير للاستخدام في onclick ═══════════ */
+window.socialLogin=socialLogin;
+window.challengeFriend=challengeFriend;

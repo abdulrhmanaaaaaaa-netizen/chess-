@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101827">
+  <title>DeepSeek Chat</title>
+
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b1220;
+      --panel: #111c2d;
+      --panel-2: #172438;
+      --line: rgba(255,255,255,.09);
+      --text: #edf4ff;
+      --muted: #91a2b9;
+      --accent: #42d6bd;
+      --user: #173d4a;
+      --danger: #ff7272;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 50% -15%, #1b3850 0, transparent 42%),
+        var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", Tahoma, Arial, sans-serif;
+    }
+
+    .app {
+      width: min(100%, 860px);
+      min-height: 100vh;
+      margin: auto;
+      display: flex;
+      flex-direction: column;
+      padding: 0 14px env(safe-area-inset-bottom);
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 15px 2px;
+      background: rgba(11,18,32,.86);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      min-width: 0;
+    }
+
+    .logo {
+      width: 43px;
+      height: 43px;
+      flex: 0 0 43px;
+      display: grid;
+      place-items: center;
+      border-radius: 15px;
+      color: #07211f;
+      font-size: 23px;
+      font-weight: 900;
+      background: linear-gradient(145deg, #7df3d9, #36bba9);
+      box-shadow: 0 6px 25px rgba(66,214,189,.18);
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .brand p {
+      margin: 3px 0 0;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #a8f2df;
+      background: rgba(66,214,189,.09);
+      border: 1px solid rgba(66,214,189,.18);
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 24px 0 16px;
+    }
+
+    .welcome {
+      text-align: center;
+      padding: 35px 10px 24px;
+    }
+
+    .welcome-icon {
+      width: 68px;
+      height: 68px;
+      margin: 0 auto 16px;
+      display: grid;
+      place-items: center;
+      border-radius: 23px;
+      background: linear-gradient(
+        145deg,
+        rgba(66,214,189,.2),
+        rgba(66,214,189,.05)
+      );
+      border: 1px solid rgba(66,214,189,.22);
+      font-size: 31px;
+    }
+
+    .welcome h2 {
+      margin: 0 0 9px;
+      font-size: clamp(21px, 5vw, 27px);
+    }
+
+    .welcome p {
+      margin: 0 auto;
+      max-width: 440px;
+      color: var(--muted);
+      line-height: 1.8;
+      font-size: 13px;
+    }
+
+    .suggestions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 9px;
+      max-width: 590px;
+      width: 100%;
+      margin: 21px auto 0;
+    }
+
+    .suggestion {
+      text-align: right;
+      color: #cbd8e8;
+      background: rgba(255,255,255,.035);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      font: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      transition: .18s;
+    }
+
+    .suggestion:active {
+      transform: scale(.98);
+      background: var(--panel-2);
+    }
+
+    #messages {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      width: 100%;
+    }
+
+    .message {
+      display: flex;
+      gap: 9px;
+      align-items: flex-start;
+      max-width: 94%;
+      animation: appear .2s ease-out;
+    }
+
+    .message.user {
+      align-self: flex-start;
+      flex-direction: row-reverse;
+    }
+
+    .message.bot {
+      align-self: flex-end;
+    }
+
+    @keyframes appear {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .avatar {
+      width: 31px;
+      height: 31px;
+      flex: 0 0 31px;
+      border-radius: 11px;
+      display: grid;
+      place-items: center;
+      font-size: 14px;
+      font-weight: 800;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+    }
+
+    .bot .avatar {
+      color: #071d1b;
+      background: var(--accent);
+      border: 0;
+    }
+
+    .bubble {
+      min-width: 0;
+      padding: 12px 14px;
+      border-radius: 17px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      line-height: 1.85;
+      font-size: 14px;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+
+    .user .bubble {
+      background: var(--user);
+      border-color: rgba(66,214,189,.13);
+      border-top-left-radius: 5px;
+    }
+
+    .bot .bubble {
+      border-top-right-radius: 5px;
+    }
+
+    .message.error .bubble {
+      border-color: rgba(255,114,114,.35);
+    }
+
+    .message-tools {
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .mini-btn {
+      background: none;
+      border: 0;
+      padding: 3px 0;
+      color: var(--muted);
+      font: inherit;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .typing {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      min-height: 20px;
+    }
+
+    .typing i {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #9cb2c8;
+      animation: pulse 1s infinite ease-in-out;
+    }
+
+    .typing i:nth-child(2) {
+      animation-delay: .15s;
+    }
+
+    .typing i:nth-child(3) {
+      animation-delay: .3s;
+    }
+
+    @keyframes pulse {
+      0%, 60%, 100% {
+        opacity: .35;
+        transform: translateY(0);
+      }
+
+      30% {
+        opacity: 1;
+        transform: translateY(-4px);
+      }
+    }
+
+    .composer-wrap {
+      position: sticky;
+      bottom: 0;
+      padding: 12px 0 max(12px, env(safe-area-inset-bottom));
+      background: linear-gradient(transparent, var(--bg) 22%);
+    }
+
+    .composer {
+      display: flex;
+      align-items: flex-end;
+      gap: 9px;
+      padding: 9px;
+      background: #142136;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 19px;
+      box-shadow: 0 12px 35px rgba(0,0,0,.22);
+    }
+
+    textarea {
+      flex: 1;
+      min-width: 0;
+      max-height: 130px;
+      min-height: 42px;
+      resize: none;
+      padding: 10px 8px;
+      border: 0;
+      outline: 0;
+      color: var(--text);
+      background: transparent;
+      font: inherit;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    textarea::placeholder {
+      color: #7f91a8;
+    }
+
+    #send {
+      width: 43px;
+      height: 43px;
+      flex: 0 0 43px;
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 14px;
+      color: #05211d;
+      background: var(--accent);
+      font-size: 20px;
+      font-weight: 900;
+      cursor: pointer;
+      transition: .18s;
+    }
+
+    #send:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    .bottom-note {
+      margin: 8px 3px 0;
+      color: #71839a;
+      text-align: center;
+      font-size: 10px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 7px;
+    }
+
+    .clear-btn {
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--muted);
+      border-radius: 11px;
+      padding: 7px 9px;
+      font: inherit;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    @media (max-width: 430px) {
+      .app {
+        padding-inline: 10px;
+      }
+
+      header {
+        padding: 12px 1px;
+      }
+
+      .status {
+        padding: 6px 8px;
+        font-size: 10px;
+      }
+
+      .welcome {
+        padding-top: 26px;
+      }
+
+      .suggestion {
+        padding: 10px;
+        font-size: 11px;
+      }
+
+      .message {
+        max-width: 98%;
+      }
+
+      .bubble {
+        font-size: 13px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="app">
+
+    <header>
+
+      <div class="brand">
+        <div class="logo">✦</div>
+
+        <div>
+          <h1>DeepSeek Chat</h1>
+          <p>مساعدك الذكي</p>
+        </div>
+      </div>
+
+      <div class="actions">
+
+        <div class="status">
+          <span class="dot"></span>
+          جاهز للمحادثة
+        </div>
+
+        <button class="clear-btn" id="clear" type="button">
+          مسح
+        </button>
+
+      </div>
+
+    </header>
+
+    <main>
+
+      <section class="welcome" id="welcome">
+
+        <div class="welcome-icon">✧</div>
+
+        <h2>أهلاً بك! كيف أساعدك؟</h2>
+
+        <p>
+          اكتب سؤالك وسأحاول مساعدتك.
+          يمكنك السؤال أو طلب شرح أو كتابة نص أو المساعدة في البرمجة.
+        </p>
+
+        <div class="suggestions">
+
+          <button class="suggestion" type="button">
+            اشرح لي الذكاء الاصطناعي ببساطة
+          </button>
+
+          <button class="suggestion" type="button">
+            اكتب لي صفحة HTML جميلة
+          </button>
+
+          <button class="suggestion" type="button">
+            ساعدني في تعلم الإنجليزية
+          </button>
+
+          <button class="suggestion" type="button">
+            اقترح أفكارًا لمشروع جديد
+          </button>
+
+        </div>
+
+      </section>
+
+      <section id="messages" aria-live="polite"></section>
+
+    </main>
+
+    <div class="composer-wrap">
+
+      <div class="composer">
+
+        <textarea
+          id="prompt"
+          rows="1"
+          placeholder="اكتب رسالتك هنا..."
+          aria-label="رسالتك"
+        ></textarea>
+
+        <button id="send" type="button" aria-label="إرسال">
+          ➤
+        </button>
+
+      </div>
+
+      <p class="bottom-note">
+        اضغط Enter للإرسال، وShift + Enter لسطر جديد
+      </p>
+
+    </div>
+
+  </div>
+
+  <script>
+
+    // إعدادات API
+
+    const API_URL =
+      'https://api.theresav.eu/api/ai/deepseek/v4';
+
+    const API_KEY = '5BTcl';
+
+
+    // عناصر الصفحة
+
+    const promptInput = document.getElementById('prompt');
+
+    const sendButton = document.getElementById('send');
+
+    const messages = document.getElementById('messages');
+
+    const welcome = document.getElementById('welcome');
+
+    const clearButton = document.getElementById('clear');
+
+    let busy = false;
+
+
+    // إضافة رسالة للمحادثة
+
+    function addMessage(role, text, isError = false) {
+
+      const row = document.createElement('div');
+
+      row.className =
+        `message ${role}` + (isError ? ' error' : '');
+
+      const avatar = document.createElement('div');
+
+      avatar.className = 'avatar';
+
+      avatar.textContent =
+        role === 'user' ? 'أنت' : '✦';
+
+      const content = document.createElement('div');
+
+      content.style.minWidth = '0';
+
+      const bubble = document.createElement('div');
+
+      bubble.className = 'bubble';
+
+      bubble.textContent = text;
+
+      content.appendChild(bubble);
+
+
+      // زر نسخ الرد
+
+      if (role === 'bot' && !isError) {
+
+        const tools = document.createElement('div');
+
+        tools.className = 'message-tools';
+
+        const copy = document.createElement('button');
+
+        copy.className = 'mini-btn';
+
+        copy.type = 'button';
+
+        copy.textContent = 'نسخ الرد';
+
+        copy.addEventListener('click', async () => {
+
+          try {
+
+            await navigator.clipboard.writeText(text);
+
+            copy.textContent = 'تم النسخ ✓';
+
+          } catch {
+
+            copy.textContent = 'تعذر النسخ';
+
+          }
+
+        });
+
+        tools.appendChild(copy);
+
+        content.appendChild(tools);
+
+      }
+
+      row.append(avatar, content);
+
+      messages.appendChild(row);
+
+      row.scrollIntoView({
+        behavior: 'smooth',
+        block: 'end'
+      });
+
+      return row;
+
+    }
+
+
+    // استخراج إجابة الذكاء الاصطناعي
+
+    function extractAnswer(data) {
+
+      if (typeof data === 'string') return data;
+
+      if (data === null || data === undefined) return '';
+
+      if (Array.isArray(data)) {
+
+        for (const item of data) {
+
+          const found = extractAnswer(item);
+
+          if (found) return found;
+
+        }
+
+        return '';
+
+      }
+
+      if (typeof data === 'object') {
+
+        const possibleKeys = [
+          'answer',
+          'response',
+          'result',
+          'text',
+          'message',
+          'reply',
+          'output',
+          'content'
+        ];
+
+        for (const key of possibleKeys) {
+
+          if (data[key] !== undefined && data[key] !== null) {
+
+            const found = extractAnswer(data[key]);
+
+            if (found) return found;
+
+          }
+
+        }
+
+        if (data.data !== undefined) {
+
+          const found = extractAnswer(data.data);
+
+          if (found) return found;
+
+        }
+
+      }
+
+      return '';
+
+    }
+
+
+    // إرسال الرسالة إلى API
+
+    async function sendMessage() {
+
+      const text = promptInput.value.trim();
+
+      if (!text || busy) return;
+
+
+      welcome.hidden = true;
+
+      addMessage('user', text);
+
+      promptInput.value = '';
+
+      resizeInput();
+
+      busy = true;
+
+      sendButton.disabled = true;
+
+
+      // مؤشر التفكير
+
+      const loadingRow = document.createElement('div');
+
+      loadingRow.className = 'message bot';
+
+      const loadingAvatar = document.createElement('div');
+
+      loadingAvatar.className = 'avatar';
+
+      loadingAvatar.textContent = '✦';
+
+      const loadingBubble = document.createElement('div');
+
+      loadingBubble.className = 'bubble';
+
+      loadingBubble.innerHTML =
+        '<span>جارٍ التفكير</span> <span class="typing"><i></i><i></i><i></i></span>';
+
+      loadingRow.append(loadingAvatar, loadingBubble);
+
+      messages.appendChild(loadingRow);
+
+      loadingRow.scrollIntoView({
+        behavior: 'smooth',
+        block: 'end'
+      });
+
+
+      try {
+
+        // تجهيز الرابط وإضافة السؤال
+
+        const url = new URL(API_URL);
+
+        url.searchParams.set('text', text);
+
+
+        // إرسال الطلب
+
+        const response = await fetch(url.toString(), {
+
+          method: 'GET',
+
+          headers: {
+            'x-apikey': API_KEY,
+            'Accept': 'application/json, text/plain, */*'
+          }
+
+        });
+
+
+        const raw = await response.text();
+
+
+        if (!response.ok) {
+
+          throw new Error(
+            `الخادم أعاد الخطأ ${response.status}: ${raw.slice(0, 350)}`
+          );
+
+        }
+
+
+        // قراءة الرد
+
+        let data;
+
+        try {
+
+          data = JSON.parse(raw);
+
+        } catch {
+
+          data = raw;
+
+        }
+
+
+        const answer = extractAnswer(data);
+
+        const finalText =
+          answer ||
+          (typeof data === 'string'
+            ? data
+            : JSON.stringify(data, null, 2));
+
+
+        loadingRow.remove();
+
+        addMessage(
+          'bot',
+          finalText || 'وصل رد فارغ من الخدمة.'
+        );
+
+
+      } catch (error) {
+
+        loadingRow.remove();
+
+        let explanation =
+          error && error.message
+            ? error.message
+            : 'حدث خطأ غير معروف.';
+
+        if (error instanceof TypeError) {
+
+          explanation =
+            'تعذر الاتصال بالخدمة. قد يكون السبب انقطاع الإنترنت أو أن الخادم لا يسمح بطلبات المواقع (CORS). جرّب تشغيل الصفحة من معاينة Acode بدل فتحها كملف مباشر.';
+
+        }
+
+        addMessage(
+          'bot',
+          'تعذر الحصول على الرد.\n' + explanation,
+          true
+        );
+
+      } finally {
+
+        busy = false;
+
+        sendButton.disabled = false;
+
+        promptInput.focus();
+
+      }
+
+    }
+
+
+    // ضبط ارتفاع مربع الكتابة
+
+    function resizeInput() {
+
+      promptInput.style.height = 'auto';
+
+      promptInput.style.height =
+        Math.min(promptInput.scrollHeight, 130) + 'px';
+
+    }
+
+
+    // زر الإرسال
+
+    sendButton.addEventListener('click', sendMessage);
+
+
+    // تغيير حجم مربع الكتابة
+
+    promptInput.addEventListener('input', resizeInput);
+
+
+    // إرسال باستخدام Enter
+
+    promptInput.addEventListener('keydown', event => {
+
+      if (
+        event.key === 'Enter' &&
+        !event.shiftKey
+      ) {
+
+        event.preventDefault();
+
+        sendMessage();
+
+      }
+
+    });
+
+
+    // مسح المحادثة
+
+    clearButton.addEventListener('click', () => {
+
+      if (busy) return;
+
+      messages.replaceChildren();
+
+      welcome.hidden = false;
+
+      promptInput.focus();
+
+    });
+
+
+    // الأسئلة المقترحة
+
+    document.querySelectorAll('.suggestion').forEach(button => {
+
+      button.addEventListener('click', () => {
+
+        promptInput.value = button.textContent;
+
+        resizeInput();
+
+        sendMessage();
+
+      });
+
+    });
+
+  </script>
+
+</body>
+  </html>

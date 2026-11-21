@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#07111d" />
+  <meta name="description" content="NIGHT RUSH 3D — لعبة قيادة وسباق شوارع ثلاثية الأبعاد." />
+  <title>NIGHT RUSH 3D | سباق الشوارع</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <main id="app">
+    <div id="scene-wrap" aria-label="مشهد لعبة ثلاثي الأبعاد"></div>
+    <div class="vignette"></div>
+
+    <header class="topbar">
+      <div class="brand-mark"><span class="brand-icon">NR</span><span><b>NIGHT RUSH</b><small>3D STREET RACING</small></span></div>
+      <div class="top-status"><span class="live-dot"></span><span id="statusText">جاهز للانطلاق</span></div>
+      <button class="icon-btn" id="soundBtn" aria-label="الصوت" title="الصوت"><span id="soundGlyph">◖))</span></button>
+    </header>
+
+    <section id="menuScreen" class="screen active">
+      <div class="menu-copy">
+        <div class="eyebrow"><i></i> تجربة قيادة ثلاثية الأبعاد</div>
+        <h1>امتلك<br><em>الطريق.</em></h1>
+        <p>مدينة لا تنام، محركات لا تهدأ، وسرعة تنتظر من يسيطر عليها.</p>
+        <div class="menu-actions">
+          <button class="primary-btn" id="startBtn"><span>ابدأ القيادة</span><b>←</b></button>
+          <button class="secondary-btn" id="garageBtn">مرآب السيارات <span>↗</span></button>
+        </div>
+        <div class="feature-row"><span>✦ عالم ثلاثي الأبعاد</span><span>◉ تحكم باللمس</span><span>⚡ نيترو</span></div>
+      </div>
+      <div class="menu-footer"><span>01 / STREET MODE</span><span>صنع لعشاق السرعة</span></div>
+    </section>
+
+    <section id="garageScreen" class="screen sub-screen">
+      <div class="panel-head"><div><div class="eyebrow">اختر آلتك</div><h2>مرآب <em>السباق</em></h2></div><button class="close-btn" id="garageClose">×</button></div>
+      <div class="garage-image"></div>
+      <div class="car-info"><div><small>السيارة المختارة</small><h3 id="carName">PHANTOM R</h3></div><div class="car-stat"><span>القوة</span><b id="carPower">920 HP</b></div><div class="car-stat"><span>السرعة القصوى</span><b id="carTop">320 KM/H</b></div></div>
+      <div class="car-selector" id="carSelector">
+        <button class="car-choice selected" data-car="0"><i style="--paint:#e3343d"></i><span>SAQR X1</span><small>01</small></button>
+        <button class="car-choice" data-car="1"><i style="--paint:#247bfa"></i><span>SAQR AZURE</span><small>02</small></button>
+        <button class="car-choice" data-car="2"><i style="--paint:#f3b627"></i><span>SAQR VOLT</span><small>03</small></button>
+        <button class="car-choice" data-car="3"><i style="--paint:#242936"></i><span>SAQR SHADOW</span><small>04</small></button>
+      </div>
+      <button class="primary-btn garage-start" id="garageStart"><span>انطلق بهذه السيارة</span><b>←</b></button>
+    </section>
+
+    <section id="pauseScreen" class="screen modal-screen">
+      <div class="modal-card"><div class="eyebrow">توقف مؤقت</div><h2>خذ نفسًا،<br><em>ثم عُد للطريق.</em></h2><button class="primary-btn" id="resumeBtn"><span>استكمال القيادة</span><b>▶</b></button><button class="secondary-btn" id="restartBtn">إعادة السباق ↻</button><button class="text-btn" id="homeBtn">العودة للقائمة الرئيسية</button></div>
+    </section>
+
+    <section id="finishScreen" class="screen modal-screen">
+      <div class="modal-card"><div class="eyebrow">انتهت الجولة</div><h2>أحسنت <em>القيادة.</em></h2><div class="finish-stats"><div><small>المسافة</small><b id="finishDistance">0.0 KM</b></div><div><small>أعلى سرعة</small><b id="finishSpeed">0 KM/H</b></div></div><button class="primary-btn" id="againBtn"><span>جولة جديدة</span><b>↻</b></button><button class="text-btn" id="finishHomeBtn">القائمة الرئيسية</button></div>
+    </section>
+
+    <section id="hud" class="hud hidden" aria-label="معلومات القيادة">
+      <div class="hud-top-left"><button id="pauseBtn" class="pause-btn">Ⅱ</button><div class="race-chip"><small>المسافة</small><b id="distanceText">0.0 <small>KM</small></b></div></div>
+      <div class="speed-card"><div class="speed-value"><b id="speedText">0</b><span>KM/H</span></div><div class="speed-track"><i id="speedFill"></i></div><div class="gear-row"><span>GEAR <b id="gearText">N</b></span><span id="driveLabel">DYNAMIC DRIVE</span></div></div>
+      <div class="hud-top-right"><div class="time-chip"><small>الوقت</small><b id="timerText">00:00</b></div><button id="cameraBtn" class="camera-btn" title="تغيير الكاميرا">◉</button></div>
+      <div id="toast" class="toast">استعد للانطلاق</div>
+
+      <div class="mobile-controls">
+        <div class="steer-area"><div class="steer-caption">STEERING</div><div class="wheel-outer" id="wheelControl"><div class="wheel-ring" id="wheelVisual"><div class="wheel-spoke spoke-a"></div><div class="wheel-spoke spoke-b"></div><div class="wheel-spoke spoke-c"></div><div class="wheel-center"><span>NR</span></div></div></div><div class="steer-arrows"><button id="leftBtn">‹</button><button id="rightBtn">›</button></div></div>
+        <div class="pedal-area"><button id="nitroBtn" class="nitro-btn"><span>⚡</span><b>N₂O</b><i id="nitroFill"></i></button><div class="pedals"><button id="brakeBtn" class="pedal brake"><b>فرامل</b><span> BRAKE</span></button><button id="gasBtn" class="pedal gas"><b>تسارع</b><span> ACCEL</span></button></div></div>
+      </div>
+      <div class="desktop-hint">W / ↑ تسارع <span>•</span> A D / ← → توجيه <span>•</span> SPACE فرامل <span>•</span> SHIFT نيترو <span>•</span> C كاميرا</div>
+    </section>
+
+    <footer class="app-footer"><span>NIGHT RUSH <b>3D</b></span><span>BUILT FOR THE NIGHT</span></footer>
+  </main>
+  <script type="module" src="game.js"></script>
+</body>
+</html>
